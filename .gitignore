@@ -1,0 +1,12 @@
+# Build artifacts
+/bin/
+*.exe
+*.test
+*.out
+
+# macOS
+.DS_Store
+
+# Private working files (not for publication)
+SPEND_LOG.md
+my notes
