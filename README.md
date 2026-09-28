@@ -1,4 +1,4 @@
-# faas — a Function-as-a-Service platform (Lambda-style), from scratch
+# MicroFaaS — a Function-as-a-Service platform (Lambda-style) from scratch
 
 A minimal FaaS platform in Go: send an HTTP event, get a fresh isolated container
 spun up to handle it, get the response back, container torn down. Built to go
