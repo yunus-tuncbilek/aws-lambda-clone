@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"time"
 )
 
 // handle answers POST / — it reads the event body and echoes a greeting.
@@ -17,7 +18,9 @@ func handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Fprintf(w, "hello, %s", event)
+	// The scratch image has no timezone data, so this is always UTC.
+	now := time.Now().Format(time.RFC3339)
+	fmt.Fprintf(w, "hello, %s at %s", event, now)
 }
 
 func main() {
