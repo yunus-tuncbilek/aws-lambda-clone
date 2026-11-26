@@ -32,6 +32,46 @@ This mac (arm64, no Docker) can't do the real work directly:
 
 ---
 
+## Technical decisions and why
+1. In the current design, a Linux VM is needed.
+
+   Because containers are built on Linux kernel features, and macOS's kernel doesn't have them.
+
+2. A function is an HTTP server inside its container.
+
+   A function could instead read an event from stdin, print a result, and exit.
+   That's simpler, but the process dies after every call, so each invocation is
+   a cold start and there's nothing to reuse. A server stays alive between
+   requests, and the warm pool (Phase 4) can send it the next event without
+   starting anything. HTTP also keeps the contract language-agnostic, since
+   nearly every language has an HTTP server.
+
+   The cost is that the platform must wait for the port to answer before
+   forwarding the event. Each running function also needs its own address, so
+   today's fixed `localhost:8080` can't serve concurrent calls (Phase 3).
+
+2. The platform is written in Go.
+
+   containerd, faasd, OpenFaaS, and `firecracker-go-sdk` are all Go projects, so
+   the control plane can call containerd through its own client library instead
+   of shelling out to a CLI. Goroutines suit a server that spends most of its
+   time waiting on other processes, and `net/http` already runs each request in
+   its own goroutine, which gives the scheduler (Phase 3) a natural start.
+   Goroutines are also lightweight: each starts with a stack of about 2 KB that
+   grows and shrinks as needed. An OS thread gets a fixed-size stack instead,
+   8 MB by default on Linux (`ulimit -s` in the VM shows 8192 KB). So one
+   goroutine per waiting request stays cheap even at thousands of requests. Go
+   also cross-compiles to one static binary: `bin/cp-linux` was built on the Mac
+   and runs in a VM that has no Go installed. Rust was the main alternative, but
+   its SDKs for this stack are thinner.
+
+   The cost is less control over memory and timing. Go's garbage collector can
+   add latency noise to the numbers this project measures, though that hasn't
+   been measured yet. Firecracker itself is written in Rust, so reading its
+   source still means reading another language.
+
+---
+
 ## Phase 0 — Scaffolding & contracts (foundation)
 Define the shapes everything else depends on before writing execution logic.
 - Repo layout, Go module, Makefile, lint/test CI.

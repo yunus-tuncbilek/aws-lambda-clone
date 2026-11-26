@@ -62,17 +62,34 @@ Full methodology in
 
 ## Running it
 
-Requires a Linux host with containerd (on macOS: [Colima](https://github.com/abiosoft/colima)
-provides one inside a VM). From inside the VM:
+Set up a Linux host. The current design requires a Linux host with containerd. On macOS: [Colima](https://github.com/abiosoft/colima)
+provides one inside a VM. The Colima VM doesn't need Go: you may build the control plane on
+the Mac as a Linux binary. Colima shares your home folder with the VM, so the
+binary is visible there.
+
+```sh
+# on the Mac: cross-compile the control plane for the VM
+GOOS=linux GOARCH=arm64 go build -o bin/cp-linux ./cmd/controlplane
+```
+
+[Note: if you're going to run the control panel binary on a a server, check to make sure it uses the given CPU architecture (arm64). If not, you just need to change how you build your binary.]
+
+```sh
+colima start -p faas --runtime containerd
+colima ssh -p faas
+cd "<project path>"
+```
+
+Then, from the project folder inside the VM, run this command with `sudo`:
 
 ```sh
 # build the example function image (nerdctl/containerd)
-nerdctl build -t hello:latest -f functions/hello/Dockerfile .
+sudo nerdctl build -t hello:latest -f functions/hello/Dockerfile .
 
 # run the control plane
-go run ./cmd/controlplane
+sudo ./bin/cp-linux
 
-# invoke it
+# in another terminal: invoke it
 curl -X POST localhost:9000/invoke/hello -d 'world'
 # -> hello, world
 ```
